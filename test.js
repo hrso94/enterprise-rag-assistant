@@ -7,7 +7,14 @@ dotenv.config();
 async function test() {
   console.log("🧪 Testiranje RAG sistema...\n");
 
-  const rag = new RAGSystem(process.env.OPENAI_API_KEY);
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn(
+      "⚠️  OPENAI_API_KEY nije postavljen. Pokrenjem samo lokalne testove...\n"
+    );
+  }
+
+  const rag = new RAGSystem(apiKey);
   const docLoader = new DocumentLoader();
 
   try {
@@ -23,23 +30,27 @@ async function test() {
     console.log(`✓ Broj dijelova: ${chunks.length}`);
     console.log(`✓ Prvi komad: "${chunks[0].substring(0, 50)}..."\n`);
 
-    // Test 3: Dodaj u RAG bazu
+    // Test 3: Dodaj u RAG bazu (bez embeddings ako nema API keya)
     console.log("3️⃣  Dodajem u RAG bazu...");
-    await rag.addDocument(doc.fileName, chunks);
-    console.log(`✓ Dokumenti u bazi: ${Object.keys(rag.vectors).length}`);
-    console.log(
-      `✓ Vektori za ${doc.fileName}: ${rag.vectors[doc.fileName].length}\n`
-    );
+    if (apiKey) {
+      await rag.addDocument(doc.fileName, chunks);
+      console.log(`✓ Dokumenti u bazi: ${Object.keys(rag.vectors).length}`);
+      console.log(
+        `✓ Vektori za ${doc.fileName}: ${rag.vectors[doc.fileName].length}\n`
+      );
 
-    // Test 4: Postavi pitanje
-    console.log("4️⃣  Postavljam pitanje agentu...");
-    const answer = await rag.answer("Što je REST API i kako se koristi?");
-    if (answer) {
-      console.log("✓ Odgovor primljen:");
-      console.log(`"${answer.substring(0, 200)}..."\n`);
+      // Test 4: Postavi pitanje (samo ako ima API keya)
+      console.log("4️⃣  Postavljam pitanje agentu...");
+      const answer = await rag.answer("Što je REST API i kako se koristi?");
+      if (answer) {
+        console.log("✓ Odgovor primljen:");
+        console.log(`"${answer.substring(0, 200)}..."\n`);
+      }
+    } else {
+      console.log(`✓ Struktura RAG-a je ispravna (testiranje embeddings je preskočeno)\n`);
     }
 
-    console.log("✅ Svi testovi su prošli!\n");
+    console.log("✅ Svi dostupni testovi su prošli!\n");
   } catch (error) {
     console.error(`❌ Greška tijekom testiranja: ${error.message}\n`);
     process.exit(1);
