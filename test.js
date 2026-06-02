@@ -5,12 +5,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 async function test() {
-  console.log("🧪 Testiranje RAG sistema...\n");
+  console.log("🧪 Testing the RAG system...\n");
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.warn(
-      "⚠️  OPENAI_API_KEY nije postavljen. Pokrenjem samo lokalne testove...\n"
+      "⚠️  OPENAI_API_KEY is not set. Running only local tests...\n"
     );
   }
 
@@ -18,41 +18,41 @@ async function test() {
   const docLoader = new DocumentLoader();
 
   try {
-    // Test 1: Učitaj dokument
-    console.log("1️⃣  Učitavam test dokument...");
+    // Test 1: Load a document
+    console.log("1️⃣  Loading test document...");
     const doc = await docLoader.loadDocument("./test_doc.md");
-    console.log(`✓ Dokument učitan: ${doc.fileName}`);
-    console.log(`✓ Veličina: ${doc.content.length} znakova\n`);
+    console.log(`✓ Document loaded: ${doc.fileName}`);
+    console.log(`✓ Size: ${doc.content.length} characters\n`);
 
-    // Test 2: Chunkiraj dokument
-    console.log("2️⃣  Dijelim dokument na dijelove...");
+    // Test 2: Chunk the document
+    console.log("2️⃣  Splitting the document into chunks...");
     const chunks = docLoader.chunkDocument(doc.content);
-    console.log(`✓ Broj dijelova: ${chunks.length}`);
-    console.log(`✓ Prvi komad: "${chunks[0].substring(0, 50)}..."\n`);
+    console.log(`✓ Number of chunks: ${chunks.length}`);
+    console.log(`✓ First chunk: "${chunks[0].substring(0, 50)}..."\n`);
 
-    // Test 3: Dodaj u RAG bazu (bez embeddings ako nema API keya)
-    console.log("3️⃣  Dodajem u RAG bazu...");
+    // Test 3: Add to the RAG store (skip embeddings if no API key)
+    console.log("3️⃣  Adding document to the RAG store...");
     if (apiKey) {
       await rag.addDocument(doc.fileName, chunks);
-      console.log(`✓ Dokumenti u bazi: ${Object.keys(rag.vectors).length}`);
+      console.log(`✓ Documents in store: ${Object.keys(rag.vectors).length}`);
       console.log(
-        `✓ Vektori za ${doc.fileName}: ${rag.vectors[doc.fileName].length}\n`
+        `✓ Vectors for ${doc.fileName}: ${rag.vectors[doc.fileName].length}\n`
       );
 
-      // Test 4: Postavi pitanje (samo ako ima API keya)
-      console.log("4️⃣  Postavljam pitanje agentu...");
-      const answer = await rag.answer("Što je REST API i kako se koristi?");
+      // Test 4: Ask a question (only if API key is available)
+      console.log("4️⃣  Asking the agent a question...");
+      const answer = await rag.answer("What is a REST API and how is it used?");
       if (answer) {
-        console.log("✓ Odgovor primljen:");
+        console.log("✓ Answer received:");
         console.log(`"${answer.substring(0, 200)}..."\n`);
       }
     } else {
-      console.log(`✓ Struktura RAG-a je ispravna (testiranje embeddings je preskočeno)\n`);
+      console.log(`✓ RAG structure is valid (embedding tests skipped)\n`);
     }
 
-    console.log("✅ Svi dostupni testovi su prošli!\n");
+    console.log("✅ All available tests passed!\n");
   } catch (error) {
-    console.error(`❌ Greška tijekom testiranja: ${error.message}\n`);
+    console.error(`❌ Error during testing: ${error.message}\n`);
     process.exit(1);
   }
 }

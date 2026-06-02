@@ -1,74 +1,54 @@
-# API Dokumentacija - Primjer
+# API Documentation - Example
 
-## Što je API?
-API (Application Programming Interface) je skup pravila koja omogućava komunikaciju između različitih softverskih aplikacija.
+## What is an API?
+API (Application Programming Interface) is a set of rules that enables communication between different software applications.
 
-## Vrste API-ja
-1. REST API - koristi HTTP protokol
-2. GraphQL API - fleksibilan format upita
-3. SOAP API - baziran na XML-u
-4. WebSocket API - za real-time komunikaciju
+## API Types
+1. REST API - uses HTTP protocol
+2. GraphQL API - flexible query format
+3. SOAP API - based on XML
+4. WebSocket API - for real-time communication
 
 ## REST API Endpoints
 
 ### GET /users
-Vraća listu svih korisnika.
-Parametri: page, limit
-Odgovor: JSON niz objekata korisnika
+Returns a list of all users.
+Parameters: page, limit
+Response: JSON array of user objects
 
 ### POST /users
-Kreira novog korisnika.
-Parametri: name, email, password
-Odgovor: Kreirani korisnik s ID-om
+Creates a new user.
+Parameters: name, email, password
+Response: Created user with ID
 
 ### GET /users/:id
-Vraća specifičnog korisnika po ID-u.
-Parametri: id
-Odgovor: JSON objekat korisnika
+Returns a specific user by ID.
+Parameters: id
+Response: JSON user object
 
 ### PUT /users/:id
-Ažurira specifičnog korisnika.
-Parametri: id, name, email
-Odgovor: Ažurirani korisnik
+Updates a specific user.
+Parameters: id, name, email
+Response: Updated user
 
 ### DELETE /users/:id
-Briše specifičnog korisnika.
-Parametri: id
-Odgovor: Potvrda brisanja
+Deletes a specific user.
+Parameters: id
+Response: Deletion confirmation
 
-## Autentifikacija
-API koristi JWT tokene za autentifikaciju.
-1. Korisnik se prijavi sa userna
-93 x 15
-1 Hidden Terminal
-Savršeno! 10MB je odličan limit. Kreiram RAG sistem s CLI interfejsom gdje korisnik može učitati dokument i odmah pitati agenta.
-
-Kreiram RAG sistem s potrebnim bibliotekama. Trebam razmotriti verzije - koristim stabilne verzije LangChain-a:
-
-npm install
-Sada ću testirati aplikaciju i stvoriti test dokument:
-
-node test.js
-✅ Sistem radi perfektno! Sada pokrenimo glavni CLI:
-
-timeout 5 npm start || true
-cd /Users/medakhrv/Projects/ai_agent && npm start &
-sleep 2
-kill %1 2>/dev/null || true
-Savršeno! ✅ Sistem je sada gotov! Evo što sam napravio:
-
-🎯 Što je Kreirano
-me i password
-2. Sustav vraća JWT token
-3. Token se koristi u Authorization header-u za sve sljedeće zahtjeve
+## Authentication
+The API uses JWT tokens for authentication.
+1. User logs in with username and password
+2. The system returns a JWT token
+3. The token is used in the Authorization header for all subsequent requests
 
 ## Error Handling
-- 400: Bad Request - greške u parametrima
-- 401: Unauthorized - korisnik nije autentificiran
-- 403: Forbidden - korisnik nema pristupa resursu
-- 404: Not Found - resurs ne postoji
-- 500: Server Error - greška na serveru
+- 400: Bad Request - parameter errors
+- 401: Unauthorized - user is not authenticated
+- 403: Forbidden - user does not have access
+- 404: Not Found - resource does not exist
+- 500: Server Error - server error
 
 ## Rate Limiting
-API ima limitaciju od 1000 zahtjeva po satu.
-Brojač se resetira svakog punog sata.
+The API is limited to 1000 requests per hour.
+The counter resets on the hour.

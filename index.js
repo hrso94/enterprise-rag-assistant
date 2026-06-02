@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import dotenv from "dotenv";
 import inquirer from "inquirer";
 import fs from "fs";
@@ -8,31 +7,27 @@ import { DocumentLoader } from "./lib/documentLoader.js";
 
 dotenv.config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const rag = new RAGSystem(process.env.OPENAI_API_KEY);
 const docLoader = new DocumentLoader();
 
 /**
- * Prikaži glavni menu
+ * Show the main menu
  */
 async function showMainMenu() {
   const answers = await inquirer.prompt([
     {
       type: "list",
       name: "action",
-      message: "Što želiš napraviti?",
+      message: "What would you like to do?",
       choices: [
-        new inquirer.Separator("=== DOKUMENTACIJA ==="),
-        { name: "📤 Učitaj dokument", value: "load" },
-        { name: "📚 Vidi učitane dokumente", value: "list" },
-        { name: "🗑️  Obriši dokument", value: "delete" },
-        new inquirer.Separator("=== UPIT ==="),
-        { name: "❓ Postavi pitanje agentu", value: "ask" },
+        new inquirer.Separator("=== DOCUMENTATION ==="),
+        { name: "📤 Load document", value: "load" },
+        { name: "📚 View loaded documents", value: "list" },
+        { name: "🗑️  Delete document", value: "delete" },
+        new inquirer.Separator("=== QUERY ==="),
+        { name: "❓ Ask the agent", value: "ask" },
         new inquirer.Separator(""),
-        { name: "❌ Izlaz", value: "exit" },
+        { name: "❌ Exit", value: "exit" },
       ],
     },
   ]);
@@ -41,17 +36,17 @@ async function showMainMenu() {
 }
 
 /**
- * Učitaj dokument
+ * Load a document
  */
 async function loadDocument() {
   const answers = await inquirer.prompt([
     {
       type: "input",
       name: "filePath",
-      message: "Unesi putanju do datoteke (npr. ./docs/dokumentacija.txt):",
+      message: "Enter the file path (e.g. ./docs/documentation.txt):",
       validate: (value) => {
-        if (!value) return "Putanja ne može biti prazna";
-        if (!fs.existsSync(value)) return `Datoteka nije pronađena: ${value}`;
+        if (!value) return "Path cannot be empty";
+        if (!fs.existsSync(value)) return `File not found: ${value}`;
         return true;
       },
     },
@@ -62,30 +57,30 @@ async function loadDocument() {
     const chunks = docLoader.chunkDocument(doc.content);
     
     console.log(
-      `\n📋 Učitano: ${doc.fileName} (${chunks.length} dijelova)\n`
+      `\n📋 Loaded: ${doc.fileName} (${chunks.length} chunks)\n`
     );
 
     await rag.addDocument(doc.fileName, chunks);
   } catch (error) {
-    console.error(`❌ Greška: ${error.message}\n`);
+    console.error(`❌ Error: ${error.message}\n`);
   }
 }
 
 /**
- * Prikaži učitane dokumente
+ * Show loaded documents
  */
 function listDocuments() {
   rag.listDocuments();
 }
 
 /**
- * Obriši dokument
+ * Delete a document
  */
 async function deleteDocument() {
   const docNames = Object.keys(rag.vectors);
   
   if (docNames.length === 0) {
-    console.log("❌ Nema učitanih dokumenata.\n");
+    console.log("❌ No loaded documents.\n");
     return;
   }
 
@@ -93,7 +88,7 @@ async function deleteDocument() {
     {
       type: "list",
       name: "docName",
-      message: "Koji dokument želiš obrisati?",
+      message: "Which document do you want to delete?",
       choices: docNames,
     },
   ]);
@@ -102,14 +97,14 @@ async function deleteDocument() {
 }
 
 /**
- * Postavi pitanje agentu
+ * Ask the agent a question
  */
 async function askQuestion() {
   const docNames = Object.keys(rag.vectors);
   
   if (docNames.length === 0) {
     console.log(
-      "❌ Nema učitanih dokumenata! Prvo učitaj dokument.\n"
+      "❌ No documents loaded! Load a document first.\n"
     );
     return;
   }
@@ -118,9 +113,9 @@ async function askQuestion() {
     {
       type: "input",
       name: "question",
-      message: "Postavi pitanje:",
+      message: "Enter your question:",
       validate: (value) => {
-        if (!value) return "Pitanje ne može biti prazno";
+        if (!value) return "Question cannot be empty";
         return true;
       },
     },
@@ -129,21 +124,21 @@ async function askQuestion() {
   try {
     const response = await rag.answer(answers.question);
     if (response) {
-      console.log("\n🤖 ODGOVOR:\n");
+      console.log("\n🤖 ANSWER:\n");
       console.log(response);
       console.log("\n");
     }
   } catch (error) {
-    console.error(`❌ Greška: ${error.message}\n`);
+    console.error(`❌ Error: ${error.message}\n`);
   }
 }
 
 /**
- * Glavna aplikacija
+ * Main application
  */
 async function main() {
   console.log("🚀 RAG AI Agent - v1.0\n");
-  console.log("Dobrodošao! Učitaj dokument i postavi pitanja agentu.\n");
+  console.log("Welcome! Load a document and ask the agent questions.\n");
 
   let running = true;
 
@@ -165,12 +160,12 @@ async function main() {
           await askQuestion();
           break;
         case "exit":
-          console.log("\n👋 Doviđenja!\n");
+          console.log("\n👋 Goodbye!\n");
           running = false;
           break;
       }
     } catch (error) {
-      console.error(`Greška: ${error.message}\n`);
+      console.error(`Error: ${error.message}\n`);
     }
   }
 }
