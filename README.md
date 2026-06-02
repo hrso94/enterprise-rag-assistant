@@ -52,8 +52,8 @@ This project explores how Retrieval-Augmented Generation (RAG) can be used to cr
 ## Quick Start
 
 ```bash
-git clone <repo>
-cd ai_agent
+git clone https://github.com/hrso94/enterprise-rag-assistant.git
+cd enterprise-rag-assistant
 npm install
 cp .env.example .env
 # add OPENAI_API_KEY to .env
