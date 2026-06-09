@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
+    "test": "node test.js",
     "web:dev": "cd web && npm run dev"
   },
   "dependencies": {
@@ -11,5 +12,8 @@
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.0.0",
     "mammoth": "^1.4.20"
+  },
+  "optionalDependencies": {
+    "@qdrant/js-client-rest": "^1.9.0"
   }
 }

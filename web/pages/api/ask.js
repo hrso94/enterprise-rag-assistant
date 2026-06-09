@@ -1,26 +1,38 @@
-import path from "path";
-import dotenv from "dotenv";
-import { RAGSystem } from "../../../lib/rag.js";
+import path from 'path';
+import dotenv from 'dotenv';
+import { RAGSystem } from '../../../lib/rag.js';
 
-// Load root .env when running web dev from 'web' directory
-dotenv.config({ path: path.resolve(process.cwd(), "..", ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 
-let rag;
-if (!global.ragInstance) {
-  global.ragInstance = new RAGSystem(process.env.OPENAI_API_KEY);
+// Lazy singleton — one RAGSystem per process, reused across warm invocations
+let ragPromise = null;
+function getRAG() {
+  if (!ragPromise) ragPromise = RAGSystem.create(process.env.OPENAI_API_KEY);
+  return ragPromise;
 }
-rag = global.ragInstance;
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { query } = req.body;
+
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'query must be a non-empty string' });
+  }
+  if (query.trim().length === 0) {
+    return res.status(400).json({ error: 'query cannot be blank' });
+  }
+  if (query.length > 2000) {
+    return res.status(400).json({ error: 'query exceeds maximum length of 2000 characters' });
+  }
 
   try {
-    const { question } = req.body;
-    if (!question) return res.status(400).json({ error: "Missing question" });
-
-    const answer = await rag.answer(question);
-    res.status(200).json({ answer });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const rag = await getRAG();
+    const result = await rag.answer(query.trim());
+    return res.status(200).json(result); // { answer, sources, retrievedChunks }
+  } catch {
+    return res.status(500).json({ error: 'Failed to process query' });
   }
 }
