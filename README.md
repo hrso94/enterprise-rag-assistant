@@ -1,51 +1,66 @@
 # Enterprise RAG Assistant
 
-Retrieval-Augmented Generation (RAG) system for document intelligence, knowledge discovery and AI-powered question answering.
+Retrieval-Augmented Generation (RAG) system for document intelligence and AI-powered question answering over organization-specific knowledge.
 
 ---
 
-## Problem
+## Overview
 
-Organizations store knowledge across multiple systems and documents.
-Finding relevant information often requires manually searching through documentation, PDFs, tickets and knowledge bases.
+Organizations store knowledge across documents, PDFs, wikis and tickets. Finding relevant information requires manual search across different sources.
 
-This project explores how Retrieval-Augmented Generation (RAG) can be used to create a grounded AI assistant capable of answering questions using organization-specific knowledge.
-
----
-
-## Design Goals
-
-- Ground responses using retrieved documentation
-- Reduce hallucinations through a retrieval-first architecture
-- Keep infrastructure simple and provider-agnostic
-- Support future enterprise integrations
-- Enable migration from local storage to production vector databases
+This project implements a production-oriented RAG pipeline that grounds LLM responses in retrieved documentation — reducing hallucinations and keeping answers auditable via source attribution.
 
 ---
 
-## Current Status
+## Architecture
 
-**Implemented:**
+```
+Documents (PDF / DOCX / TXT / Markdown / JSON)
+          │
+          ▼
+  DocumentLoader — chunking with overlap
+          │
+          ▼
+  Embeddings (OpenAI, batched)
+          │
+          ▼
+  VectorStore (JsonVectorStore │ QdrantVectorStore)
+          │
+          ▼
+  Hybrid Retrieval (BM25 + vector, configurable α)
+          │
+          ▼
+  Relevance threshold filter
+          │
+          ▼
+  Grounded answer + source attribution
+          │
+          ▼
+  CLI / Web UI
+```
 
-- Document ingestion (TXT, Markdown, JSON, PDF, DOCX)
-- Chunking
-- Embeddings
-- Local vector storage
-- Semantic retrieval
-- OpenAI-based grounded answer generation
-- Docker support
-- Minimal Web UI with conversation history
+**Storage backends:**
 
-**Planned:**
+| Backend | Use case | Search |
+|---|---|---|
+| `JsonVectorStore` | Local dev, testing | O(n) brute-force |
+| `QdrantVectorStore` | Production | HNSW index, O(log n) |
 
-- Hybrid search
-- Reranking
-- Evaluation framework
-- Permission-aware retrieval
-- SharePoint connector
-- Confluence connector
-- Jira connector
-- Provider abstraction for multi-LLM support
+Switch via `VECTOR_STORE_TYPE=json|qdrant` env var — no code changes required.
+
+---
+
+## Features
+
+- **Hybrid search** — BM25 keyword matching combined with dense vector similarity. Dense search handles semantic queries; BM25 handles exact-term matches (error codes, product names, technical jargon). Weighted combination configurable via `HYBRID_ALPHA`.
+- **Relevance threshold** — queries scoring below `SIMILARITY_THRESHOLD` return no results rather than a hallucinated answer.
+- **Source attribution** — every answer includes the source documents it was grounded in, visible in both CLI and Web UI.
+- **Pluggable storage** — `VectorStore` abstract interface with JSON (dev) and Qdrant (production) implementations. Adding a new backend requires implementing 4 methods.
+- **Evaluation framework** — `RAGEvaluator` measures Hit Rate, MRR and Keyword Precision against ground-truth test cases, without requiring LLM calls.
+- **Batch embeddings** — chunks are embedded in batches, reducing API calls from O(n) to O(n/batchSize).
+- **Retry with backoff** — exponential backoff on 429/5xx errors.
+- **Structured logging** — JSON log output with level, timestamp and request metadata. Compatible with Datadog, CloudWatch, etc.
+- **Document formats** — PDF, DOCX, TXT, Markdown, JSON.
 
 ---
 
@@ -59,17 +74,21 @@ cp .env.example .env
 # add OPENAI_API_KEY to .env
 ```
 
-### Run CLI
+### CLI
 
 ```bash
 npm start
 ```
 
-### Run Web UI
+### Web UI
 
 ```bash
+cd web && npm install && npm run dev
+# or from root:
 npm run web:dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000)
 
 ### Docker
 
@@ -78,224 +97,113 @@ docker build -t rag-agent .
 docker run --env-file .env --rm -p 3000:3000 rag-agent
 ```
 
----
+### Production (Qdrant)
 
-## Features
+```bash
+docker run -p 6333:6333 qdrant/qdrant
 
-- Document upload and ingestion
-- Semantic retrieval over organization-specific content
-- Grounded answer generation using retrieved context
-- Conversation history in the Web UI
-- Local connector pattern for enterprise sources
-- Mocked Jira / Confluence connector skeletons
-- Docker-ready deployment
-
----
-
-## Architecture
-
-```
-  Documents (PDF / DOCX / TXT / Markdown / JSON)
-            |
-            v
-   Ingestion Pipeline (chunking, embeddings)
-            |
-            v
-       Local Vector DB
-            |
-            v
-      Semantic Retrieval
-            |
-            v
-       Grounded Answer
-            |
-            v
-     User interface (CLI / Web)
-```
-
----
-
-## Enterprise Integrations (architecture-ready)
-
-This repository is built with a pluggable connector pattern and explicit enterprise integration readiness.
-
-- `lib/connectors/interface.js` defines a `DataSource` interface: `getDocuments(): Promise<Document[]>`
-- `LocalFilesSource` provides a working local ingestion example
-- `MockJiraSource` and `MockConfluenceSource` are intentionally lightweight skeletons
-
-The current code avoids sharing proprietary integration logic while demonstrating how enterprise sources should be integrated.
-
-In production, connectors should implement:
-
-- OAuth or PAT authentication
-- pagination and rate limit handling
-- permission-aware retrieval
-- incremental sync and delta ingestion
-- source citations for traceability
-
----
-
-## Known Limitations
-
-- No access-control layer implemented yet
-- Retrieval quality depends on chunking strategy
-- Local JSON storage is not suitable for large datasets
-- No evaluation pipeline currently implemented
-
----
-
-## Future Enterprise Features
-
-- Jira ingestion
-- Confluence ingestion
-- SharePoint ingestion
-- Permission-aware retrieval
-- Role-based access control
-- Source citations
-- Hybrid search (BM25 + vector search)
-- Reranking
-- LLM provider abstraction
-
----
-
-## AI Engineering Considerations
-
-This project intentionally focuses on:
-
-- Hallucination reduction
-- Context optimization
-- Retrieval quality
-- Token cost optimization
-- Provider-agnostic architecture
-- Future enterprise integrations
-
----
-
-## How it works
-
-1. **Document ingestion** – ingest files and text content
-2. **Chunking** – split documents into manageable segments
-3. **Embeddings** – convert text to vectors with OpenAI embeddings
-4. **Vector search** – retrieve relevant chunks using cosine similarity
-5. **Grounded answer** – prompt OpenAI with retrieved context and user question
-
----
-
-## Project Structure
-
-```
-ai_agent/
-├── index.js                 # CLI entrypoint
-├── test.js                  # Test harness
-├── package.json             # Dependencies and scripts
-├── .env.example             # Example environment variables
-├── .gitignore               # Ignore configuration
-├── lib/
-│   ├── rag.js               # RAG pipeline and search logic
-│   ├── documentLoader.js    # Document ingestion and parsing
-│   └── connectors/          # Connector skeletons for enterprise sources
-├── web/                     # Minimal Next.js web UI
-├── data/
-│   └── vectors.json         # Local vector store (generated)
-└── test_doc.md              # Sample test document
+# .env
+VECTOR_STORE_TYPE=qdrant
+QDRANT_URL=http://localhost:6333
 ```
 
 ---
 
 ## Configuration
 
-### Change top-K retrieval
+All parameters are configurable via environment variables — no source edits needed.
 
-Edit `lib/rag.js`:
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | — | Required |
+| `CHAT_MODEL` | `gpt-4o-mini` | Chat completion model |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model |
+| `RETRIEVAL_TOP_K` | `5` | Max chunks returned |
+| `SIMILARITY_THRESHOLD` | `0.55` | Min vector score to include result |
+| `HYBRID_ALPHA` | `0.7` | Vector weight (0=BM25 only, 1=vector only) |
+| `CHUNK_SIZE` | `500` | Characters per chunk |
+| `CHUNK_OVERLAP` | `100` | Overlap between adjacent chunks |
+| `VECTOR_STORE_TYPE` | `json` | `json` or `qdrant` |
+| `LOG_LEVEL` | `info` | `debug` / `info` / `warn` / `error` |
 
-```js
-async retrieveRelevantChunks(query, topK = 3) {
-```
-
-### Change model
-
-Edit `lib/rag.js`:
-
-```js
-this.chatModel = "gpt-3.5-turbo";
-```
-
-### Tune chunk size
-
-Edit `lib/documentLoader.js`:
-
-```js
-chunkDocument(content, chunkSize = 500, chunkOverlap = 100) {
-```
+See `.env.example` for the full list.
 
 ---
 
 ## Testing
 
-Run the test harness:
-
 ```bash
-node test.js
+npm test
 ```
 
-The test will:
+30 tests covering:
+- Document loading (format detection, size limits, error cases)
+- Chunking (overlap verification, edge cases)
+- Hybrid search (scoring, threshold, alpha weight, topK)
+- RAGSystem (indexing, retrieval, structured response)
+- RAGEvaluator (Hit Rate, MRR, Keyword Precision)
 
-- load `test_doc.md`
-- process the document
-- generate embeddings
-- validate retrieval and response generation
+Tests run without an API key; API-dependent tests are skipped automatically in CI.
 
 ---
 
-## Security
+## Evaluation
 
-⚠️ Do not commit `.env` or any secret keys.
+```js
+import { RAGEvaluator } from './lib/evaluator.js';
 
-```bash
-git check-ignore .env
+const evaluator = new RAGEvaluator(rag);
+const report = await evaluator.evaluate([
+  {
+    query: 'How does authentication work?',
+    expectedSources: ['auth-docs.md'],
+    expectedKeywords: ['JWT', 'token'],
+  },
+]);
+// { hitRate: 1, mrr: 1, keywordPrecision: 0.8, totalCases: 1 }
 ```
 
 ---
 
-## Cost Considerations
+## Project Structure
 
-OpenAI charges for:
-
-- Embeddings: `text-embedding-3-small`
-- Chat completions: `gpt-3.5-turbo`
-
-This project is designed to keep costs low by:
-
-- limiting chunk size
-- using local vector storage for proofs of concept
-- focusing on retrieval quality before larger context windows
+```
+enterprise-rag-assistant/
+├── index.js                        # CLI entrypoint
+├── test.js                         # Test suite (30 tests)
+├── package.json
+├── .env.example                    # All configuration options documented
+├── lib/
+│   ├── rag.js                      # RAGSystem — pipeline orchestration
+│   ├── documentLoader.js           # Ingestion and chunking
+│   ├── config.js                   # Centralized config with env var overrides
+│   ├── logger.js                   # Structured JSON logger
+│   ├── evaluator.js                # Retrieval quality metrics
+│   ├── stores/
+│   │   ├── VectorStore.js          # Abstract interface
+│   │   ├── JsonVectorStore.js      # File-based (dev/test)
+│   │   ├── QdrantVectorStore.js    # Production (HNSW index)
+│   │   └── index.js                # Factory (VECTOR_STORE_TYPE)
+│   ├── retrieval/
+│   │   └── hybridSearch.js         # BM25 + vector combined scoring
+│   └── connectors/
+│       └── interface.js            # DataSource interface for enterprise connectors
+├── web/                            # Next.js web UI with source attribution
+└── data/
+    └── vectors.json                # Local vector store (gitignored)
+```
 
 ---
 
-## Why this project
+## Known Limitations and Roadmap
 
-This project was created as part of my transition from traditional software engineering toward AI implementation and enterprise knowledge systems.
+**Storage:** `JsonVectorStore` performs O(n) scan at query time and loads the full store into memory. Suitable for development and small corpora (<1k chunks). Use `QdrantVectorStore` for production.
 
-The goal is to explore practical applications of LLMs, Retrieval-Augmented Generation (RAG), vector search and enterprise knowledge integration.
+**Retrieval:** No cross-encoder reranking. A reranking step after hybrid retrieval would improve precision for complex queries.
 
----
+**Access control:** No per-document permission filtering. The `VectorStore` interface is designed to support metadata filtering (Qdrant payload filters) as a foundation for RBAC — not yet implemented.
 
-## Troubleshooting
-
-### OpenAI key missing
-
-- Add `OPENAI_API_KEY` to `.env`
-- Verify the key is valid and has access to the required models
-
-### Model not found
-
-- `gpt-3.5-turbo` is used by default
-- Ensure your OpenAI account has access to the configured model
-
-### File not found
-
-- Use relative or absolute paths from the repository root
-- Example: `./docs/file.md`
+**Connectors:** Jira, Confluence and SharePoint connector skeletons exist in `lib/connectors/` but are not implemented.
 
 ---
 
